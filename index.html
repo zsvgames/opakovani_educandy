@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#61d4ee">
+  <title>Kvízová výzva</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --sky: #61d4ee;
+      --teal: #078b9b;
+      --teal-dark: #087b88;
+      --green: #71d92e;
+      --ink: #123b46;
+      --white: #fff;
+      font-family: "Trebuchet MS", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 70% 15%, #a0eff7 0, transparent 36%),
+        linear-gradient(135deg, #43c6e3, var(--sky) 58%, #7ce0ef);
+    }
+    button { font: inherit; }
+    button:focus-visible { outline: 3px solid #ffdf36; outline-offset: 3px; }
+
+    .game {
+      width: min(100%, 980px);
+      min-height: min(620px, calc(100dvh - 36px));
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) 116px;
+      overflow: hidden;
+      background: rgba(103, 220, 239, .54);
+      box-shadow: 0 18px 48px #087c8a2b;
+    }
+    .rail {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--teal-dark);
+    }
+    .back-button {
+      width: 100%;
+      height: 56px;
+      padding: 0;
+      border: 0;
+      color: white;
+      background: transparent;
+      font-size: 42px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .play-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 38px clamp(18px, 5vw, 56px);
+      text-align: center;
+      transform: translateX(34px);
+    }
+    .eyebrow {
+      margin: 0 0 20px;
+      color: #116b79;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0 0 12px;
+      color: #075b6c;
+      font-size: clamp(25px, 4vw, 38px);
+      line-height: 1.12;
+    }
+    .intro-copy {
+      max-width: 470px;
+      margin: 0 0 28px;
+      color: #175965;
+      font-size: 16px;
+      line-height: 1.55;
+    }
+    #intro-screen { animation: screen-enter .65s cubic-bezier(.2,.75,.25,1) both; }
+    #result-screen:not(.hidden) { animation: screen-enter .5s cubic-bezier(.2,.75,.25,1) both; }
+    .question {
+      width: min(100%, 570px);
+      min-height: 68px;
+      display: grid;
+      place-items: center;
+      margin: 0 0 20px;
+      margin-inline: auto;
+      padding: 14px 20px;
+      border-radius: 8px;
+      background: var(--white);
+      color: #102b31;
+      box-shadow: 0 3px 0 #25a9be22;
+      font-size: clamp(16px, 2.2vw, 20px);
+      line-height: 1.35;
+    }
+    .answers {
+      width: min(100%, 480px);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 16px;
+      margin-inline: auto;
+    }
+    .answer {
+      min-height: 54px;
+      padding: 12px 14px;
+      border: 0;
+      border-radius: 7px;
+      background: #139eaf;
+      color: white;
+      box-shadow: 0 3px 0 #087f90;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.25;
+      cursor: pointer;
+      transition: transform .18s ease, filter .18s ease, background .2s ease, box-shadow .2s ease;
+    }
+    .answer:hover:not(:disabled) { filter: brightness(1.06); }
+    .answer:active:not(:disabled) { transform: translateY(1px) scale(.98); }
+    .answer:disabled { cursor: default; }
+    .answers.entering .answer { animation: option-enter .4s cubic-bezier(.2,.75,.25,1) both; }
+    .answers.entering .answer:nth-child(2) { animation-delay: .08s; }
+    .answer.correct { background: #2cae5b; box-shadow: 0 3px 0 #218a47, 0 0 18px #2cae5b66; animation: answer-correct .48s cubic-bezier(.2,.8,.25,1.2) both; }
+    .answer.wrong { background: #ef715e; box-shadow: 0 3px 0 #c65243; animation: answer-wrong .38s ease both; }
+    .answer.muted { opacity: .72; }
+    .question.entering { animation: question-enter .48s cubic-bezier(.2,.75,.25,1) both; }
+    .answers.entering { animation: answers-enter .38s ease both; }
+    .feedback {
+      min-height: 27px;
+      margin: 13px 0 0;
+      color: #145b68;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .feedback.pop { animation: feedback-pop .35s cubic-bezier(.2,.8,.25,1.2) both; }
+    .progress-wrap {
+      width: min(100%, 480px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 9px;
+      margin-inline: auto;
+    }
+    .progress-track {
+      height: 12px;
+      flex: 1;
+      overflow: hidden;
+      border-radius: 99px;
+      background: #1596a6;
+    }
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: #ffdf37;
+      transition: width .55s cubic-bezier(.2,.75,.25,1);
+    }
+    .progress-count {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      flex: 0 0 42px;
+      place-items: center;
+      border-radius: 50%;
+      background: white;
+      color: #1ba6b8;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .progress-count.bump { animation: count-bump .4s cubic-bezier(.2,.8,.25,1.2) both; }
+    .primary {
+      min-width: 160px;
+      min-height: 48px;
+      padding: 11px 24px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--green);
+      box-shadow: 0 4px 0 #55b820;
+      color: white;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .primary { transition: transform .18s ease, filter .18s ease, box-shadow .18s ease; }
+    .primary:hover { filter: brightness(1.05); transform: translateY(-2px); box-shadow: 0 6px 0 #55b820; }
+    .primary:active { transform: translateY(2px) scale(.98); box-shadow: 0 2px 0 #55b820; }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 24px 10px 16px;
+      background: #56cee6a8;
+    }
+    .stat {
+      width: 74px;
+      padding: 4px 6px;
+      border-radius: 9px;
+      background: white;
+      text-align: center;
+    }
+    .stat-label {
+      display: block;
+      margin-bottom: 1px;
+      color: #317280;
+      font-size: 8px;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .stat-value {
+      display: block;
+      color: #163d46;
+      font-size: 15px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+    .stat-value.pop { animation: score-pop .42s cubic-bezier(.2,.8,.25,1.2) both; }
+    .mascot {
+      width: 58px;
+      height: 62px;
+      margin-top: 1px;
+      transform-origin: 50% 100%;
+      animation: mascot-float 3.2s ease-in-out infinite;
+    }
+    .jar {
+      position: relative;
+      width: 66px;
+      height: 100px;
+      overflow: hidden;
+      border: 3px solid #fff;
+      border-top-width: 5px;
+      border-radius: 9px 9px 17px 17px;
+      background: #ffffffa8;
+      box-shadow: 0 0 0 2px #159bad, inset 0 -5px 0 #149eb0;
+    }
+    .jar::before {
+      position: absolute;
+      z-index: 2;
+      top: 0;
+      left: -3px;
+      width: calc(100% + 6px);
+      height: 10px;
+      border-bottom: 2px solid #138d9d;
+      background: #f7ffff;
+      content: "";
+    }
+    .jar-fill {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 0;
+      background-color: #fff5;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, #f34c88 0 2px, transparent 3px),
+        radial-gradient(ellipse at 70% 65%, #ffd62e 0 2px, transparent 3px),
+        radial-gradient(ellipse at 45% 40%, #21c4de 0 2px, transparent 3px),
+        radial-gradient(ellipse at 80% 25%, #8a55d7 0 2px, transparent 3px),
+        radial-gradient(ellipse at 30% 75%, #63d94b 0 2px, transparent 3px);
+      background-size: 19px 19px, 23px 23px, 17px 17px, 21px 21px, 25px 25px;
+      background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
+      transition: height .65s cubic-bezier(.2,.75,.25,1);
+    }
+    .jar-scene {
+      position: relative;
+      width: max-content;
+    }
+    .jar-marble-layer {
+      position: absolute;
+      z-index: 3;
+      inset: 0;
+      overflow: visible;
+      pointer-events: none;
+    }
+    .score-marble {
+      position: absolute;
+      top: -8px;
+      left: var(--marble-x);
+      width: 9px;
+      height: 9px;
+      border: 1px solid #ffffffc9;
+      border-radius: 50%;
+      background: var(--marble-color);
+      box-shadow: inset -1px -1px 2px #0003, 0 1px 3px #07586966;
+      pointer-events: none;
+    }
+    .jar-caption {
+      margin-top: -5px;
+      color: #126a78;
+      font-size: 9px;
+      font-weight: 800;
+    }
+    .hidden { display: none !important; }
+    .result-score {
+      margin: 8px 0 22px;
+      color: #0a8698;
+      font-size: clamp(42px, 8vw, 64px);
+      font-weight: 900;
+      line-height: 1;
+    }
+    .result-copy { margin: 0 0 26px; color: #175965; line-height: 1.5; }
+    .screen-reader {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    @keyframes screen-enter {
+      from { opacity: 0; transform: translateY(14px) scale(.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes question-enter {
+      from { opacity: 0; transform: translateY(12px) scale(.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes answers-enter {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes answer-correct {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.045); }
+      100% { transform: scale(1); }
+    }
+    @keyframes answer-wrong {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      65% { transform: translateX(4px); }
+    }
+    @keyframes feedback-pop {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes count-bump {
+      45% { transform: scale(1.16); }
+      100% { transform: scale(1); }
+    }
+    @keyframes score-pop {
+      45% { transform: scale(1.25); color: #0a8698; }
+      100% { transform: scale(1); }
+    }
+    @keyframes mascot-float {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      50% { transform: translateY(-4px) rotate(2deg); }
+    }
+    @keyframes option-enter {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 620px) {
+      body { display: block; padding: 0; }
+      .game {
+        margin: 0 auto;
+        min-height: 100dvh;
+        grid-template-columns: minmax(0, 1fr) 76px;
+        grid-template-rows: 44px minmax(0, 1fr);
+      }
+      .rail {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        min-height: 44px;
+        justify-content: flex-start;
+        padding: 0 10px;
+      }
+      .back-button { width: 44px; height: 44px; font-size: 36px; }
+      .play-area {
+        grid-column: 1;
+        grid-row: 2;
+        min-width: 0;
+        padding: 24px 16px;
+        transform: none;
+      }
+      .sidebar {
+        grid-column: 2;
+        grid-row: 2;
+        gap: 9px;
+        padding: var(--sidebar-top-padding, clamp(100px, 16vh, 145px)) 5px max(12px, env(safe-area-inset-bottom));
+      }
+      .stat { width: 66px; }
+      .mascot { width: 50px; height: 55px; }
+      .jar { width: 54px; height: clamp(96px, 20dvh, 160px); }
+      .jar-caption { font-size: 7px; line-height: 1.2; text-align: center; }
+      .question { min-height: 62px; padding: 12px 14px; }
+      .answers {
+        width: min(100%, 440px);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .answer { min-height: 50px; padding: 9px 7px; font-size: 14px; overflow-wrap: anywhere; }
+    }
+    @media (max-width: 370px) {
+      .play-area { padding-right: 12px; padding-left: 12px; }
+      .game { grid-template-columns: minmax(0, 1fr) 70px; }
+      .sidebar { gap: 7px; padding-right: 3px; padding-left: 3px; }
+      .stat { width: 64px; }
+      .mascot { width: 46px; height: 52px; }
+      .jar { width: 50px; height: clamp(90px, 18dvh, 140px); }
+      .jar-caption { font-size: 6px; }
+      .progress-wrap { gap: 7px; }
+      .progress-count { width: 36px; height: 36px; flex-basis: 36px; }
+    }
+    @media (max-width: 620px) and (max-height: 480px) {
+      .sidebar { gap: 4px; padding-top: 6px; padding-bottom: 6px; }
+      .mascot { width: 40px; height: 44px; }
+      .jar { height: 76px; }
+      .jar-caption { display: none; }
+    }
+    @media (min-width: 621px) and (max-width: 900px) and (max-height: 500px) {
+      body { display: block; padding: 0; }
+      .game {
+        min-height: 100dvh;
+        grid-template-columns: minmax(0, 1fr) 76px;
+        grid-template-rows: 44px minmax(0, 1fr);
+      }
+      .rail {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        min-height: 44px;
+        justify-content: flex-start;
+        padding: 0 10px;
+      }
+      .back-button { width: 44px; height: 44px; font-size: 36px; }
+      .play-area {
+        grid-column: 1;
+        grid-row: 2;
+        min-width: 0;
+        padding: 12px 20px;
+        transform: none;
+      }
+      .sidebar {
+        grid-column: 2;
+        grid-row: 2;
+        gap: 4px;
+        padding: 6px 5px;
+      }
+      .stat { width: 66px; }
+      .mascot { width: 40px; height: 44px; }
+      .jar { width: 54px; height: 76px; }
+      .jar-caption { display: none; }
+      .answers {
+        width: min(100%, 440px);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .answer { min-height: 44px; padding: 8px; font-size: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game" aria-label="Kvízová hra">
+    <nav class="rail" aria-label="Ovládání hry">
+      <button class="back-button" id="back-button" type="button" aria-label="Zpět na úvod">‹</button>
+    </nav>
+
+    <section class="play-area">
+      <div id="intro-screen">
+        <p class="eyebrow">Rychlá kvízová výzva</p>
+        <h1>Otestuj si svoje znalosti!</h1>
+        <p class="intro-copy">Čeká tě 20 otázek z politologie, politického kompasu, levice a pravice. Vyber jednu ze dvou možností a nasbírej co nejvíc bodů.</p>
+        <button class="primary" id="start-button" type="button">Spustit hru</button>
+      </div>
+
+      <div id="quiz-screen" class="hidden">
+        <p class="eyebrow" id="topic-label" aria-live="polite">Otázka 1 z 20</p>
+        <h1 class="question" id="question-text" tabindex="-1"></h1>
+        <div class="answers" id="answers" aria-label="Možnosti odpovědi"></div>
+        <p class="feedback" id="feedback" role="status"></p>
+        <div class="progress-wrap" aria-label="Postup hrou">
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+          <div class="progress-count" id="progress-count">0/20</div>
+        </div>
+      </div>
+
+      <div id="result-screen" class="hidden">
+        <p class="eyebrow">Kvíz dokončen</p>
+        <h1 id="result-title" tabindex="-1">Skvělá práce!</h1>
+        <p class="result-score" id="result-score">0/20</p>
+        <p class="result-copy" id="result-copy"></p>
+        <button class="primary" id="replay-button" type="button">Hrát znovu</button>
+      </div>
+    </section>
+
+    <aside class="sidebar" aria-label="Stav hry">
+      <div class="stat">
+        <span class="stat-label">Čas</span>
+        <span class="stat-value" id="timer" aria-label="Uplynulý čas">00:00</span>
+      </div>
+      <svg class="mascot" viewBox="0 0 64 68" role="img" aria-label="Herní maskot">
+        <ellipse cx="32" cy="62" rx="18" ry="4" fill="#13899a" opacity=".25"/>
+        <path d="M16 28c0-13 7-21 16-21s16 8 16 21v24H16z" fill="#995de0"/>
+        <path d="M20 11 15 2l12 5M44 11l5-9-12 5" fill="#995de0"/>
+        <path d="M21 26c0-7 4-11 11-11s11 4 11 11-4 12-11 12-11-5-11-12" fill="#d8b7ff"/>
+        <ellipse cx="27" cy="26" rx="3.2" ry="4.2" fill="#222052"/>
+        <ellipse cx="37" cy="26" rx="3.2" ry="4.2" fill="#222052"/>
+        <circle cx="28" cy="25" r="1" fill="#fff"/><circle cx="38" cy="25" r="1" fill="#fff"/>
+        <path d="M28 32q4 4 8 0" fill="none" stroke="#482a80" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M21 49h22l4 8H17z" fill="#0a8795"/>
+        <text x="32" y="55" fill="#fff" font-size="5" text-anchor="middle">KVÍZ</text>
+        <path d="M25 57v8m14-8v8" stroke="#173d49" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <div class="stat">
+        <span class="stat-label">Skóre</span>
+        <span class="stat-value" id="score" aria-label="Skóre">0</span>
+      </div>
+      <div class="jar-scene">
+        <div class="jar" role="img" aria-label="Sklenice naplněná za správné odpovědi">
+          <div class="jar-fill" id="jar-fill"></div>
+        </div>
+        <div class="jar-marble-layer" id="jar-marbles" aria-hidden="true"></div>
+      </div>
+      <div class="jar-caption">SPRÁVNÉ ODPOVĚDI</div>
+    </aside>
+  </main>
+
+  <script>
+    const QUESTION_BANK = [
+      { topic: "Politologie", question: "Která ideologie klade důraz na svobodu jednotlivce a osobní odpovědnost?", options: ["Liberalismus", "Konzervatismus", "Socialismus", "Autoritářství"], answer: 0 },
+      { topic: "Politologie", question: "Která ideologie si cení tradic, rodiny a odmítá rychlé společenské změny?", options: ["Konzervatismus", "Libertarianismus", "Socialismus", "Liberalismus"], answer: 0 },
+      { topic: "Politologie", question: "Která ideologie usiluje o větší společenskou spravedlnost a menší rozdíly mezi lidmi?", options: ["Socialismus", "Konzervatismus", "Liberalismus", "Monarchismus"], answer: 0 },
+      { topic: "Politologie", question: "Ideologie je představa o tom, …", options: ["Jak má fungovat společnost", "Kolik má parlament poslanců", "Kdo vyhraje volby", "Jak vypadá státní vlajka"], answer: 0 },
+      { topic: "Levice a pravice", question: "Levice a pravice určují především…", options: ["způsob financování státu", "pravidla chování občanů", "délku mandátu poslanců", "počet krajů"], answer: 0 },
+      { topic: "Levice a pravice", question: "Sociální podpora a solidarita se obvykle spojují s…", options: ["levicí", "pravicí"], answer: 0 },
+      { topic: "Levice a pravice", question: "Nižší daně a menší zásahy státu do podnikání se obvykle spojují s…", options: ["pravicí", "levicí"], answer: 0 },
+      { topic: "Levice a pravice", question: "Podpora chudých a přerozdělování bohatství se obvykle spojuje s…", options: ["levicí", "pravicí"], answer: 0 },
+      { topic: "Levice a pravice", question: "Výstavba infrastruktury pro firmy bývá označována jako krok…", options: ["pravicový", "levicový"], answer: 0 },
+      { topic: "Levice a pravice", question: "Veřejná podpora dostupného bydlení bývá krok…", options: ["levicový", "pravicový"], answer: 0 },
+      { topic: "Politický kompas", question: "Které dvě osy spojuje politický kompas?", options: ["Levice–pravice, autorita–svoboda", "Komunismus-socialismus, anarchismus-kapitalismus", "Bohatí–chudí, město–venkov", "Daně–dávky, práce–škola"], answer: 0 },
+      { topic: "Politický kompas", question: "Libertariánství na politickém kompasu znamená důraz na…", options: ["osobní svobodu", "přísná pravidla", "státní vlastnictví", "silnou centrální autoritu"], answer: 0 },
+      { topic: "Politický kompas", question: "Autoritářství na politickém kompasu znamená důraz na…", options: ["přísná pravidla a autoritu", "osobní svobodu bez omezení", "pouze volný trh", "přímou demokracii ve všech věcech"], answer: 0 },
+      { topic: "Levice a pravice", question: "Progresivní zdanění, kdy lidé s vyššími příjmy odvádějí větší podíl, se obvykle spojuje s…", options: ["levicí", "pravicí"], answer: 0 },
+      { topic: "Levice a pravice", question: "Který přístup zdůrazňuje osobní odpovědnost a menší přerozdělování?", options: ["Pravicový", "Levicový"], answer: 0 },
+      { topic: "Levice a pravice", question: "Bezplatné veřejné zdravotnictví a školství se obvykle spojují s…", options: ["levicí", "pravicí"], answer: 0 },
+      { topic: "Levice a pravice", question: "Který směr klade větší důraz na nižší daně a menší zásahy státu do podnikání?", options: ["Pravicový", "Levicový"], answer: 0 },
+      { topic: "Politický kompas", question: "Strana podporuje podnikání a zároveň chce rozšiřovat osobní svobody. Kam nejspíš patří?", options: ["Pravice a libertariánský směr", "Levice a autoritářský směr", "Levice a libertariánský směr", "Pravice a autoritářský směr"], answer: 0 },
+      { topic: "Politický kompas", question: "Strana podporuje sociální dávky a zároveň prosazuje přísná pravidla a silnou autoritu. Kam nejspíš patří?", options: ["Levice a autoritářský směr", "Pravice a libertariánský směr", "Levice a libertariánský směr", "Pravice a autoritářský směr"], answer: 0 },
+      { topic: "Politický kompas", question: "Která osa politického kompasu vyjadřuje míru osobní svobody a státní autority?", options: ["Svislá osa", "Vodorovná osa", "Město–venkov", "Mladí–staří"], answer: 0 }
+    ];
+
+    const QUESTION_COUNT = QUESTION_BANK.length;
+    const FEEDBACK_DELAY = 1100;
+    const animationTimers = new WeakMap();
+    const directionPattern = /^(?:levice|pravice|levicí|pravicí|levicový|pravicový)$/i;
+    const bankErrors = [];
+
+    if (QUESTION_COUNT !== 20) bankErrors.push(`Očekáváno 20 otázek, nalezeno ${QUESTION_COUNT}.`);
+    QUESTION_BANK.forEach((entry, index) => {
+      if (!entry || typeof entry.topic !== "string" || !entry.topic.trim()) {
+        bankErrors.push(`Otázka ${index + 1} nemá platné téma.`);
+        return;
+      }
+      if (typeof entry.question !== "string" || !entry.question.trim()) {
+        bankErrors.push(`Otázka ${index + 1} nemá text.`);
+      }
+      if (!Array.isArray(entry.options) || entry.options.length < 2 ||
+          entry.options.some(option => typeof option !== "string" || !option.trim()) ||
+          new Set(entry.options).size !== entry.options.length) {
+        bankErrors.push(`Otázka ${index + 1} musí mít alespoň dvě unikátní textové možnosti.`);
+        return;
+      }
+      if (!Number.isInteger(entry.answer) || entry.answer < 0 || entry.answer >= entry.options.length) {
+        bankErrors.push(`Otázka ${index + 1} má neplatný index správné odpovědi.`);
+      }
+      const hasLeftRightChoice = entry.options.some(option => directionPattern.test(option.trim()));
+      if (entry.topic === "Levice a pravice" && hasLeftRightChoice &&
+          (!entry.options.some(option => /^(?:levice|levicí|levicový)$/i.test(option.trim())) ||
+           !entry.options.some(option => /^(?:pravice|pravicí|pravicový)$/i.test(option.trim())))) {
+        bankErrors.push(`Otázka ${index + 1} musí obsahovat protikladné možnosti levice i pravice.`);
+      }
+    });
+    if (bankErrors.length) throw new Error(`Neplatná banka otázek:\n${bankErrors.join("\n")}`);
+    const elements = {
+      intro: document.getElementById("intro-screen"),
+      quiz: document.getElementById("quiz-screen"),
+      result: document.getElementById("result-screen"),
+      topic: document.getElementById("topic-label"),
+      question: document.getElementById("question-text"),
+      answers: document.getElementById("answers"),
+      feedback: document.getElementById("feedback"),
+      progress: document.getElementById("progress-fill"),
+      progressCount: document.getElementById("progress-count"),
+      timer: document.getElementById("timer"),
+      score: document.getElementById("score"),
+      jar: document.getElementById("jar-fill"),
+      jarGlass: document.querySelector(".jar"),
+      jarMarbles: document.getElementById("jar-marbles"),
+      sidebar: document.querySelector(".sidebar")
+    };
+
+    let round = [];
+    let current = 0;
+    let score = 0;
+    let elapsedSeconds = 0;
+    let timerId = null;
+    let advanceId = null;
+    let gameStartedAt = null;
+
+    function shuffle(items) {
+      const shuffled = [...items];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+    }
+
+    function replayAnimation(element, className, duration) {
+      const previousTimer = animationTimers.get(element);
+      if (previousTimer) window.clearTimeout(previousTimer);
+      element.classList.remove(className);
+      void element.offsetWidth;
+      element.classList.add(className);
+      const timer = window.setTimeout(() => {
+        element.classList.remove(className);
+        animationTimers.delete(element);
+      }, duration);
+      animationTimers.set(element, timer);
+    }
+
+    function clearScoreMarbles() {
+      elements.jarMarbles.replaceChildren();
+    }
+
+    function dropScoreMarbles() {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (typeof Element.prototype.animate !== "function") return;
+
+      const colors = ["#ffdf37", "#fa5b91", "#735be7"];
+      const jarHeight = elements.jarGlass.clientHeight;
+      const fillHeight = jarHeight * score / QUESTION_COUNT;
+      const landingY = Math.max(12, jarHeight - fillHeight - 8);
+
+      colors.forEach((color, index) => {
+        const marble = document.createElement("span");
+        const horizontalOffset = (index - 1) * 10;
+        marble.className = "score-marble";
+        marble.style.setProperty("--marble-color", color);
+        marble.style.setProperty("--marble-x", `calc(50% + ${horizontalOffset}px)`);
+        elements.jarMarbles.append(marble);
+
+        const animation = marble.animate([
+          { transform: "translate(-50%, -18px) scale(.7)", opacity: 0 },
+          { transform: "translate(-50%, 0) scale(1)", opacity: 1, offset: .18 },
+          { transform: `translate(-50%, ${landingY}px) scale(.78)`, opacity: 1, offset: .84 },
+          { transform: `translate(-50%, ${landingY + 5}px) scale(.5)`, opacity: 0 }
+        ], {
+          duration: 720 + index * 90,
+          delay: index * 100,
+          easing: "cubic-bezier(.2,.7,.3,1)",
+          fill: "forwards"
+        });
+        animation.onfinish = () => marble.remove();
+      });
+    }
+
+    function updateHud() {
+      elements.timer.textContent = formatTime(elapsedSeconds);
+      elements.score.textContent = String(score);
+      elements.jar.style.height = `${(score / QUESTION_COUNT) * 100}%`;
+      const completed = Math.min(current, QUESTION_COUNT);
+      elements.progress.style.width = `${(completed / QUESTION_COUNT) * 100}%`;
+      elements.progressCount.textContent = `${completed}/${QUESTION_COUNT}`;
+    }
+
+    function alignSidebarWithTopic() {
+      if (!window.matchMedia("(max-width: 620px)").matches) {
+        elements.sidebar.style.removeProperty("--sidebar-top-padding");
+        return;
+      }
+      const target = !elements.intro.classList.contains("hidden")
+        ? elements.intro.querySelector("h1")
+        : elements.quiz.classList.contains("hidden")
+          ? null
+          : elements.topic;
+      if (!target) {
+        elements.sidebar.style.removeProperty("--sidebar-top-padding");
+        return;
+      }
+      const topicTop = target.getBoundingClientRect().top;
+      const sidebarTop = elements.sidebar.getBoundingClientRect().top;
+      elements.sidebar.style.setProperty("--sidebar-top-padding", `${Math.max(0, topicTop - sidebarTop)}px`);
+    }
+
+    function beginGame() {
+      clearInterval(timerId);
+      clearTimeout(advanceId);
+      clearScoreMarbles();
+      round = shuffle(QUESTION_BANK).slice(0, QUESTION_COUNT);
+      current = 0;
+      score = 0;
+      elapsedSeconds = 0;
+      gameStartedAt = Date.now();
+      elements.intro.classList.add("hidden");
+      elements.result.classList.add("hidden");
+      elements.quiz.classList.remove("hidden");
+      updateHud();
+      showQuestion();
+      timerId = setInterval(() => {
+        elapsedSeconds = Math.floor((Date.now() - gameStartedAt) / 1000);
+        elements.timer.textContent = formatTime(elapsedSeconds);
+      }, 250);
+    }
+
+    function showQuestion() {
+      const entry = round[current];
+      if (!entry) {
+        finishGame();
+        return;
+      }
+      elements.topic.textContent = `${entry.topic} · Otázka ${current + 1} z ${QUESTION_COUNT}`;
+      elements.question.textContent = entry.question;
+      replayAnimation(elements.question, "entering", 550);
+      elements.feedback.textContent = "";
+      elements.answers.replaceChildren();
+      const allChoices = entry.options.map((text, index) => ({ text, correct: index === entry.answer }));
+      const correctChoice = allChoices.find(choice => choice.correct);
+      const distractor = shuffle(allChoices.filter(choice => !choice.correct))[0];
+      const choices = shuffle([correctChoice, distractor]);
+      choices.forEach(choice => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "answer";
+        button.textContent = choice.text;
+        button.addEventListener("click", () => chooseAnswer(button, choice.correct, choices));
+        elements.answers.append(button);
+      });
+      replayAnimation(elements.answers, "entering", 500);
+      updateHud();
+      replayAnimation(elements.progressCount, "bump", 450);
+      window.requestAnimationFrame(alignSidebarWithTopic);
+      elements.question.focus({ preventScroll: true });
+    }
+
+    function chooseAnswer(selectedButton, isCorrect, choices) {
+      if (elements.answers.querySelector("button:disabled")) return;
+      elements.answers.querySelectorAll("button").forEach(button => { button.disabled = true; });
+      if (isCorrect) {
+        score += 1;
+        selectedButton.classList.add("correct");
+        elements.feedback.textContent = "Správně! +1 bod";
+      } else {
+        selectedButton.classList.add("wrong");
+        elements.feedback.textContent = `To není ono. Správně: ${choices.find(choice => choice.correct).text}`;
+        elements.answers.querySelectorAll("button").forEach(button => {
+          if (button.textContent === choices.find(choice => choice.correct).text) button.classList.add("correct");
+          else if (button !== selectedButton) button.classList.add("muted");
+        });
+      }
+      replayAnimation(elements.feedback, "pop", 400);
+      if (isCorrect) {
+        replayAnimation(elements.score, "pop", 500);
+      }
+      updateHud();
+      if (isCorrect) dropScoreMarbles();
+      advanceId = setTimeout(() => {
+        current += 1;
+        if (current >= QUESTION_COUNT) finishGame();
+        else showQuestion();
+      }, FEEDBACK_DELAY);
+    }
+
+    function finishGame() {
+      clearInterval(timerId);
+      timerId = null;
+      elapsedSeconds = gameStartedAt === null ? elapsedSeconds : Math.floor((Date.now() - gameStartedAt) / 1000);
+      gameStartedAt = null;
+      elements.quiz.classList.add("hidden");
+      elements.result.classList.remove("hidden");
+      elements.progress.style.width = "100%";
+      elements.progressCount.textContent = `${QUESTION_COUNT}/${QUESTION_COUNT}`;
+      document.getElementById("result-score").textContent = `${score}/${QUESTION_COUNT}`;
+      const percentage = Math.round((score / QUESTION_COUNT) * 100);
+      document.getElementById("result-title").textContent =
+        percentage >= 80 ? "Parádní výsledek!" : percentage >= 50 ? "Dobrá práce!" : "Zkus to ještě jednou!";
+      document.getElementById("result-copy").textContent =
+        `Správně jsi odpověděl/a na ${score} z ${QUESTION_COUNT} otázek za ${formatTime(elapsedSeconds)}.`;
+      updateHud();
+      document.getElementById("result-title").focus({ preventScroll: true });
+    }
+
+    function showIntro() {
+      clearInterval(timerId);
+      clearTimeout(advanceId);
+      timerId = null;
+      gameStartedAt = null;
+      clearScoreMarbles();
+      elements.quiz.classList.add("hidden");
+      elements.result.classList.add("hidden");
+      elements.intro.classList.remove("hidden");
+      window.requestAnimationFrame(alignSidebarWithTopic);
+    }
+
+    document.getElementById("start-button").addEventListener("click", beginGame);
+    document.getElementById("replay-button").addEventListener("click", beginGame);
+    document.getElementById("back-button").addEventListener("click", showIntro);
+    window.addEventListener("resize", alignSidebarWithTopic);
+    elements.intro.addEventListener("animationend", alignSidebarWithTopic);
+    window.requestAnimationFrame(alignSidebarWithTopic);
+  </script>
+</body>
+</html>
