@@ -1,0 +1,1144 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#61d4ee">
+  <title>Kvízová výzva</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --sky: #61d4ee;
+      --teal: #078b9b;
+      --teal-dark: #087b88;
+      --green: #71d92e;
+      --ink: #123b46;
+      --white: #fff;
+      font-family: "Trebuchet MS", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 70% 15%, #a0eff7 0, transparent 36%),
+        linear-gradient(135deg, #43c6e3, var(--sky) 58%, #7ce0ef);
+    }
+    button { font: inherit; }
+    button:focus-visible { outline: 3px solid #ffdf36; outline-offset: 3px; }
+
+    .game {
+      width: min(100%, 1120px);
+      min-height: min(700px, calc(100dvh - 36px));
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) 140px;
+      overflow: hidden;
+      background: rgba(103, 220, 239, .54);
+      box-shadow: 0 18px 48px #087c8a2b;
+    }
+    .rail {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--teal-dark);
+    }
+    .back-button {
+      width: 100%;
+      height: 56px;
+      padding: 0;
+      border: 0;
+      color: white;
+      background: transparent;
+      font-size: 42px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .play-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 38px clamp(18px, 5vw, 56px);
+      text-align: center;
+      transform: translateX(34px);
+    }
+    .eyebrow {
+      margin: 0 0 16px;
+      color: #116b79;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0 0 12px;
+      color: #075b6c;
+      font-size: clamp(28px, 4.6vw, 46px);
+      line-height: 1.12;
+    }
+    .intro-copy {
+      max-width: 560px;
+      margin: 0 0 30px;
+      color: #175965;
+      font-size: 19px;
+      line-height: 1.55;
+    }
+    .names-field {
+      width: min(100%, 500px);
+      padding: 18px 18px 8px;
+      border-radius: 18px;
+      background: #ffffff59;
+      box-shadow: 0 0 0 2px #ffffff80, 0 12px 28px #087c8a22;
+      text-align: left;
+    }
+    .names-label {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin: 0 0 12px;
+      color: #075b6c;
+      font-size: 19px;
+      font-weight: 900;
+    }
+    .names-label span {
+      color: #2a7f8c;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .names-input {
+      display: block;
+      width: 100%;
+      min-height: 100px;
+      margin-bottom: 4px;
+      padding: 14px 16px;
+      border: 3px solid #139eaf;
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: inset 0 3px 0 #0a869818;
+      color: var(--ink);
+      font: inherit;
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.4;
+      resize: vertical;
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    .names-input::placeholder { color: #86b9c2; font-style: italic; font-weight: 600; }
+    .names-input:focus-visible {
+      border-color: #ffdf37;
+      outline: none;
+      box-shadow: 0 0 0 5px #ffdf3766, inset 0 3px 0 #0a869818;
+    }
+    .name-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .name-chips:empty { display: none; }
+    .name-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      max-width: 100%;
+      padding: 5px 13px 5px 9px;
+      border-radius: 999px;
+      background: #fff;
+      color: #075b6c;
+      box-shadow: 0 2px 0 #25a9be44;
+      font-size: 15px;
+      font-weight: 800;
+      overflow-wrap: anywhere;
+      animation: chip-pop .3s cubic-bezier(.2,.8,.25,1.2) both;
+    }
+    .name-chip::before {
+      width: 10px;
+      height: 10px;
+      flex: 0 0 10px;
+      border-radius: 50%;
+      background: #ffdf37;
+      box-shadow: 0 0 0 2px #139eaf33;
+      content: "";
+    }
+    .name-chip.more { background: #139eaf; color: #fff; }
+    .name-chip.more::before { display: none; }
+    @keyframes chip-pop {
+      from { opacity: 0; transform: scale(.7); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .names-error {
+      min-height: 21px;
+      margin: 4px 0 0;
+      color: #a62e25;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    #intro-screen, #quiz-screen, #result-screen { width: 100%; }
+    #intro-screen { animation: screen-enter .65s cubic-bezier(.2,.75,.25,1) both; }
+    #result-screen:not(.hidden) { animation: screen-enter .5s cubic-bezier(.2,.75,.25,1) both; }
+    .respondent {
+      position: relative;
+      z-index: 2;
+      width: min(100%, 700px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      margin: 0 auto 22px;
+      padding: 10px 24px 14px;
+      border: 5px solid #ffdf37;
+      border-radius: 16px;
+      background: var(--white);
+      color: #075b6c;
+      box-shadow: 0 7px 0 #e0bd12;
+      transition: transform .75s cubic-bezier(.2,.75,.25,1);
+    }
+    .respondent-label {
+      color: #2a7f8c;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+    }
+    .respondent-name {
+      max-width: 100%;
+      font-size: clamp(34px, 6.4vw, 62px);
+      font-weight: 900;
+      line-height: 1.05;
+      overflow-wrap: anywhere;
+    }
+    .respondent.shuffling .respondent-name { opacity: .65; filter: blur(1.5px); }
+    .respondent-name.landed { animation: name-land .5s cubic-bezier(.2,.8,.25,1.2) both; }
+    @keyframes name-land {
+      0% { transform: scale(.8); }
+      60% { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+    #quiz-screen .eyebrow, #quiz-screen .feedback, #quiz-screen .progress-wrap { transition: opacity .5s ease .3s; }
+    #quiz-screen.picking .respondent { transform: translateY(var(--pick-dy, 0px)) scale(var(--pick-scale, 1.2)); }
+    #quiz-screen.picking .eyebrow,
+    #quiz-screen.picking .feedback,
+    #quiz-screen.picking .progress-wrap { opacity: 0; transition: none; }
+    #quiz-screen.picking .question,
+    #quiz-screen.picking .answers { opacity: 0; visibility: hidden; pointer-events: none; }
+    .question {
+      width: min(100%, 700px);
+      min-height: 104px;
+      display: grid;
+      place-items: center;
+      margin: 0 0 24px;
+      margin-inline: auto;
+      padding: 20px 28px;
+      border-radius: 8px;
+      background: var(--white);
+      color: #102b31;
+      box-shadow: 0 3px 0 #25a9be22;
+      font-size: clamp(20px, 2.7vw, 28px);
+      line-height: 1.3;
+    }
+    .answers {
+      width: min(100%, 680px);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px 20px;
+      margin-inline: auto;
+    }
+    .answer {
+      min-height: 80px;
+      padding: 14px 18px;
+      border: 0;
+      border-radius: 12px;
+      background: #139eaf;
+      color: white;
+      box-shadow: 0 3px 0 #087f90;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.25;
+      cursor: pointer;
+      transition: transform .18s ease, filter .18s ease, background .2s ease, box-shadow .2s ease;
+    }
+    .answer:hover:not(:disabled) { filter: brightness(1.06); }
+    .answer:active:not(:disabled) { transform: translateY(1px) scale(.98); }
+    .answer:disabled { cursor: default; }
+    .answers.entering .answer { animation: option-enter .4s cubic-bezier(.2,.75,.25,1) both; }
+    .answers.entering .answer:nth-child(2) { animation-delay: .08s; }
+    .answer.correct { background: #2cae5b; box-shadow: 0 3px 0 #218a47, 0 0 18px #2cae5b66; animation: answer-correct .48s cubic-bezier(.2,.8,.25,1.2) both; }
+    .answer.wrong { background: #ef715e; box-shadow: 0 3px 0 #c65243; animation: answer-wrong .38s ease both; }
+    .answer.muted { opacity: .72; }
+    .question.entering { animation: question-enter .48s cubic-bezier(.2,.75,.25,1) .22s both; }
+    .answers.entering { animation: answers-enter .38s ease .4s both; }
+    .feedback {
+      min-height: 34px;
+      margin: 16px 0 0;
+      color: #145b68;
+      font-size: 19px;
+      font-weight: 700;
+    }
+    .feedback.pop { animation: feedback-pop .35s cubic-bezier(.2,.8,.25,1.2) both; }
+    .progress-wrap {
+      width: min(100%, 680px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 9px;
+      margin-inline: auto;
+    }
+    .progress-track {
+      height: 18px;
+      flex: 1;
+      overflow: hidden;
+      border-radius: 99px;
+      background: #1596a6;
+    }
+    .progress-fill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: #ffdf37;
+      transition: width .55s cubic-bezier(.2,.75,.25,1);
+    }
+    .progress-count {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      flex: 0 0 54px;
+      place-items: center;
+      border-radius: 50%;
+      background: white;
+      color: #1ba6b8;
+      font-size: 17px;
+      font-weight: 800;
+    }
+    .progress-count.bump { animation: count-bump .4s cubic-bezier(.2,.8,.25,1.2) both; }
+    .primary {
+      min-width: 200px;
+      min-height: 58px;
+      padding: 11px 24px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--green);
+      box-shadow: 0 4px 0 #55b820;
+      color: white;
+      font-size: 19px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .primary { transition: transform .18s ease, filter .18s ease, box-shadow .18s ease; }
+    .primary:hover { filter: brightness(1.05); transform: translateY(-2px); box-shadow: 0 6px 0 #55b820; }
+    .primary:active { transform: translateY(2px) scale(.98); box-shadow: 0 2px 0 #55b820; }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 26px 10px 18px;
+      background: #56cee6a8;
+    }
+    .stat {
+      width: 104px;
+      padding: 7px 8px;
+      border-radius: 12px;
+      background: white;
+      text-align: center;
+    }
+    .stat-label {
+      display: block;
+      margin-bottom: 1px;
+      color: #317280;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .stat-value {
+      display: block;
+      color: #163d46;
+      font-size: 24px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+    .stat-value.pop { animation: score-pop .42s cubic-bezier(.2,.8,.25,1.2) both; }
+    .mascot {
+      width: 80px;
+      height: 86px;
+      margin-top: 1px;
+      transform-origin: 50% 100%;
+      animation: mascot-float 3.2s ease-in-out infinite;
+    }
+    .jar {
+      position: relative;
+      width: 88px;
+      height: 140px;
+      overflow: hidden;
+      border: 3px solid #fff;
+      border-top-width: 5px;
+      border-radius: 9px 9px 17px 17px;
+      background: #ffffffa8;
+      box-shadow: 0 0 0 2px #159bad, inset 0 -5px 0 #149eb0;
+    }
+    .jar::before {
+      position: absolute;
+      z-index: 2;
+      top: 0;
+      left: -3px;
+      width: calc(100% + 6px);
+      height: 10px;
+      border-bottom: 2px solid #138d9d;
+      background: #f7ffff;
+      content: "";
+    }
+    .jar-fill {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 0;
+      background-color: #fff5;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, #f34c88 0 2px, transparent 3px),
+        radial-gradient(ellipse at 70% 65%, #ffd62e 0 2px, transparent 3px),
+        radial-gradient(ellipse at 45% 40%, #21c4de 0 2px, transparent 3px),
+        radial-gradient(ellipse at 80% 25%, #8a55d7 0 2px, transparent 3px),
+        radial-gradient(ellipse at 30% 75%, #63d94b 0 2px, transparent 3px);
+      background-size: 19px 19px, 23px 23px, 17px 17px, 21px 21px, 25px 25px;
+      background-position: 0 0, 0 0, 0 0, 0 0, 0 0;
+      transition: height .65s cubic-bezier(.2,.75,.25,1);
+    }
+    .jar-scene {
+      position: relative;
+      width: max-content;
+    }
+    .jar-marble-layer {
+      position: absolute;
+      z-index: 3;
+      inset: 0;
+      overflow: visible;
+      pointer-events: none;
+    }
+    .score-marble {
+      position: absolute;
+      top: -8px;
+      left: var(--marble-x);
+      width: 9px;
+      height: 9px;
+      border: 1px solid #ffffffc9;
+      border-radius: 50%;
+      background: var(--marble-color);
+      box-shadow: inset -1px -1px 2px #0003, 0 1px 3px #07586966;
+      pointer-events: none;
+    }
+    .jar-caption {
+      margin-top: -5px;
+      color: #126a78;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .sidebar-inner { display: contents; }
+    .hidden { display: none !important; }
+    .result-score {
+      margin: 8px 0 22px;
+      color: #0a8698;
+      font-size: clamp(42px, 8vw, 64px);
+      font-weight: 900;
+      line-height: 1;
+    }
+    .result-copy { margin: 0 0 26px; color: #175965; line-height: 1.5; }
+    .screen-reader {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    @keyframes screen-enter {
+      from { opacity: 0; transform: translateY(14px) scale(.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes question-enter {
+      from { opacity: 0; transform: translateY(12px) scale(.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes answers-enter {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes answer-correct {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.045); }
+      100% { transform: scale(1); }
+    }
+    @keyframes answer-wrong {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      65% { transform: translateX(4px); }
+    }
+    @keyframes feedback-pop {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes count-bump {
+      45% { transform: scale(1.16); }
+      100% { transform: scale(1); }
+    }
+    @keyframes score-pop {
+      45% { transform: scale(1.25); color: #0a8698; }
+      100% { transform: scale(1); }
+    }
+    @keyframes mascot-float {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      50% { transform: translateY(-4px) rotate(2deg); }
+    }
+    @keyframes option-enter {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Desktop: pevné rozměry prvků, aby se rozložení mezi otázkami nikdy neměnilo */
+    @media (min-width: 621px) and (min-height: 501px) {
+      .play-area { transform: none; padding: 24px 28px; }
+      /* skóre začíná ve výšce boxu "Odpovídá" a sklenice končí ve výšce pruhu postupu */
+      .sidebar { justify-content: center; padding: 0 10px; }
+      .sidebar-inner {
+        --content-h: 556px;
+        height: var(--content-h);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding-top: 34px;
+      }
+      .stat, .jar, .jar-caption { width: 104px; }
+      .jar-scene { flex: 1 1 auto; min-height: 100px; display: flex; }
+      .jar { height: auto; flex: 1; }
+      .jar-caption { margin-top: 0; font-size: 11px; line-height: 1.2; text-align: center; }
+      .eyebrow { height: 20px; margin: 0 0 14px; white-space: nowrap; }
+      .respondent {
+        height: 118px;
+        justify-content: center;
+        margin-bottom: 18px;
+        padding-top: 4px;
+        padding-bottom: 8px;
+      }
+      .respondent-name {
+        display: block;
+        width: 100%;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        font-size: clamp(34px, 5vw, 56px);
+      }
+      .question {
+        width: min(100%, 700px);
+        height: 150px;
+        min-height: 0;
+        margin-bottom: 18px;
+        padding: 14px 26px;
+        overflow: hidden;
+        font-size: clamp(19px, 2.3vw, 25px);
+      }
+      .answers { width: min(100%, 700px); grid-auto-rows: 92px; }
+      .answer { height: 92px; min-height: 0; padding: 10px 18px; font-size: 19px; }
+      .feedback {
+        height: 56px;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 12px 0 0;
+        line-height: 1.25;
+      }
+      .progress-wrap { width: min(100%, 700px); margin-top: 4px; }
+    }
+    @media (max-width: 620px) {
+      body { display: block; padding: 0; }
+      .game {
+        margin: 0 auto;
+        min-height: 100dvh;
+        grid-template-columns: minmax(0, 1fr) 76px;
+        grid-template-rows: 44px minmax(0, 1fr);
+      }
+      .rail {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        min-height: 44px;
+        justify-content: flex-start;
+        padding: 0 10px;
+      }
+      .back-button { width: 44px; height: 44px; font-size: 36px; }
+      .play-area {
+        grid-column: 1;
+        grid-row: 2;
+        min-width: 0;
+        padding: 24px 16px;
+        transform: none;
+      }
+      .sidebar {
+        grid-column: 2;
+        grid-row: 2;
+        gap: 9px;
+        padding: var(--sidebar-top-padding, clamp(100px, 16vh, 145px)) 5px max(12px, env(safe-area-inset-bottom));
+      }
+      .stat { width: 66px; }
+      .mascot { width: 50px; height: 55px; }
+      .jar { width: 54px; height: clamp(96px, 20dvh, 160px); }
+      .jar-caption { font-size: 7px; line-height: 1.2; text-align: center; }
+      .question { min-height: 62px; padding: 12px 14px; }
+      .answers {
+        width: min(100%, 440px);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .answer { min-height: 50px; padding: 9px 7px; font-size: 14px; overflow-wrap: anywhere; }
+    }
+    @media (max-width: 370px) {
+      .play-area { padding-right: 12px; padding-left: 12px; }
+      .game { grid-template-columns: minmax(0, 1fr) 70px; }
+      .sidebar { gap: 7px; padding-right: 3px; padding-left: 3px; }
+      .stat { width: 64px; }
+      .mascot { width: 46px; height: 52px; }
+      .jar { width: 50px; height: clamp(90px, 18dvh, 140px); }
+      .jar-caption { font-size: 6px; }
+      .progress-wrap { gap: 7px; }
+      .progress-count { width: 36px; height: 36px; flex-basis: 36px; }
+    }
+    @media (max-width: 620px) and (max-height: 480px) {
+      .sidebar { gap: 4px; padding-top: 6px; padding-bottom: 6px; }
+      .mascot { width: 40px; height: 44px; }
+      .jar { height: 76px; }
+      .jar-caption { display: none; }
+    }
+    @media (min-width: 621px) and (max-width: 900px) and (max-height: 500px) {
+      body { display: block; padding: 0; }
+      .game {
+        min-height: 100dvh;
+        grid-template-columns: minmax(0, 1fr) 76px;
+        grid-template-rows: 44px minmax(0, 1fr);
+      }
+      .rail {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        min-height: 44px;
+        justify-content: flex-start;
+        padding: 0 10px;
+      }
+      .back-button { width: 44px; height: 44px; font-size: 36px; }
+      .play-area {
+        grid-column: 1;
+        grid-row: 2;
+        min-width: 0;
+        padding: 12px 20px;
+        transform: none;
+      }
+      .sidebar {
+        grid-column: 2;
+        grid-row: 2;
+        gap: 4px;
+        padding: 6px 5px;
+      }
+      .stat { width: 66px; }
+      .mascot { width: 40px; height: 44px; }
+      .jar { width: 54px; height: 76px; }
+      .jar-caption { display: none; }
+      .answers {
+        width: min(100%, 440px);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .answer { min-height: 44px; padding: 8px; font-size: 14px; }
+    }
+
+    @media (max-width: 620px) {
+      .stat-label { font-size: 9px; }
+      .stat-value { font-size: 18px; }
+      .eyebrow { font-size: 12px; }
+      .respondent { margin-bottom: 16px; padding: 6px 16px 10px; border-width: 4px; box-shadow: 0 5px 0 #e0bd12; }
+      .respondent-label { font-size: 12px; }
+      .respondent-name { font-size: clamp(30px, 10vw, 44px); }
+      .question { min-height: 84px; padding: 14px 16px; font-size: clamp(18px, 5vw, 22px); }
+      .answers { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+      .answer { min-height: 62px; padding: 10px 12px; font-size: 17px; }
+      .feedback { font-size: 15px; min-height: 40px; }
+      .progress-track { height: 14px; }
+    }
+    @media (max-width: 620px) and (max-height: 480px) {
+      .answers { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .answer { min-height: 46px; font-size: 14px; }
+      .respondent-name { font-size: 26px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game" aria-label="Kvízová hra">
+    <nav class="rail" aria-label="Ovládání hry">
+      <button class="back-button" id="back-button" type="button" aria-label="Zpět na úvod">‹</button>
+    </nav>
+
+    <section class="play-area">
+      <div id="intro-screen">
+        <div class="names-field">
+          <label class="names-label" for="names-input">Kdo hraje? <span>Jména odděl čárkou nebo novým řádkem</span></label>
+          <textarea class="names-input" id="names-input" rows="3" placeholder="Např. Anna, Petr, Karolína…" aria-describedby="names-error"></textarea>
+          <div class="name-chips" id="name-chips" aria-hidden="true"></div>
+          <p class="names-error" id="names-error" role="alert"></p>
+        </div>
+        <button class="primary" id="start-button" style="margin-top:22px" type="button">Spustit hru</button>
+      </div>
+
+      <div id="quiz-screen" class="hidden">
+        <p class="eyebrow" id="topic-label" aria-live="polite">Otázka 1 z 20</p>
+        <p class="respondent" id="respondent-label" aria-live="polite"></p>
+        <h1 class="question" id="question-text" tabindex="-1"></h1>
+        <div class="answers" id="answers" aria-label="Možnosti odpovědi"></div>
+        <p class="feedback" id="feedback" role="status"></p>
+        <div class="progress-wrap" aria-label="Postup hrou">
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+          <div class="progress-count" id="progress-count">0/20</div>
+        </div>
+      </div>
+
+      <div id="result-screen" class="hidden">
+        <p class="eyebrow">Kvíz dokončen</p>
+        <h1 id="result-title" tabindex="-1">Skvělá práce!</h1>
+        <p class="result-score" id="result-score">0/20</p>
+        <p class="result-copy" id="result-copy"></p>
+        <button class="primary" id="replay-button" type="button">Hrát znovu</button>
+      </div>
+    </section>
+
+    <aside class="sidebar" aria-label="Stav hry">
+      <div class="sidebar-inner">
+      <div class="stat">
+        <span class="stat-label">Skóre</span>
+        <span class="stat-value" id="score" aria-label="Skóre">0</span>
+      </div>
+      <div class="jar-scene">
+        <div class="jar" role="img" aria-label="Sklenice naplněná za správné odpovědi">
+          <div class="jar-fill" id="jar-fill"></div>
+        </div>
+        <div class="jar-marble-layer" id="jar-marbles" aria-hidden="true"></div>
+      </div>
+      <div class="jar-caption">SPRÁVNÉ ODPOVĚDI</div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const QUESTION_BANK = [
+      { topic: "Politologie", question: "Která ideologie klade důraz na svobodu jednotlivce a osobní odpovědnost?", options: ["Liberalismus", "Konzervatismus"], answer: 0 },
+      { topic: "Politologie", question: "Která ideologie si cení tradic, rodiny a odmítá rychlé společenské změny?", options: ["Konzervatismus", "Liberalismus"], answer: 0 },
+      { topic: "Politologie", question: "Která ideologie usiluje o větší společenskou spravedlnost a menší rozdíly mezi lidmi?", options: ["Socialismus", "Konzervatismus"], answer: 0 },
+      { topic: "Politologie", question: "Ideologie je představa o tom, …", options: ["Jak má fungovat společnost", "Kam má finančně stát směřovat"], answer: 0 },
+      { topic: "Levice a pravice", question: "Levice a pravice určují především…", options: ["způsob financování státu", "pravidla chování občanů"], answer: 0 },
+      { topic: "Levice a pravice", question: "Sociální podpora a solidarita se obvykle spojují s…", options: ["levicí", "pravicí"], answer: 0 },
+      { topic: "Levice a pravice", question: "Nižší daně a menší zásahy státu do podnikání se obvykle spojují s…", options: ["pravicí", "levicí"], answer: 0 },
+      { topic: "Levice a pravice", question: "Podpora chudých a přerozdělování bohatství se obvykle spojuje s…", options: ["levicí", "pravicí"], answer: 0 },
+      { topic: "Levice a pravice", question: "Výstavba infrastruktury pro firmy bývá označována jako krok…", options: ["pravicový", "levicový"], answer: 0 },
+      { topic: "Levice a pravice", question: "Veřejná podpora dostupného bydlení bývá krok…", options: ["levicový", "pravicový"], answer: 0 },
+      { topic: "Politický kompas", question: "Které dvě osy spojuje politický kompas?", options: ["Levice–pravice, autorita–svoboda", "Komunismus-socialismus, anarchismus-kapitalismus"], answer: 0 },
+      { topic: "Politický kompas", question: "Libertariánství na politickém kompasu znamená důraz na…", options: ["osobní svobodu", "přísná pravidla"], answer: 0 },
+      { topic: "Politický kompas", question: "Autoritářství na politickém kompasu znamená důraz na…", options: ["přísná pravidla a autoritu", "rovnost mezi lidmi a sociální dávky"], answer: 0 },
+      { topic: "Levice a pravice", question: "Progresivní zdanění, kdy lidé s vyššími příjmy odvádějí větší podíl, se obvykle spojuje s…", options: ["levicí", "pravicí"], answer: 0 },
+      { topic: "Levice a pravice", question: "Který přístup zdůrazňuje osobní odpovědnost a menší přerozdělování?", options: ["Pravicový", "Levicový"], answer: 0 },
+      { topic: "Levice a pravice", question: "Bezplatné veřejné zdravotnictví a školství se obvykle spojují s…", options: ["levicí", "pravicí"], answer: 0 },
+      { topic: "Levice a pravice", question: "Který směr klade větší důraz na nižší daně a menší zásahy státu do podnikání?", options: ["Pravicový", "Levicový"], answer: 0 },
+      { topic: "Politický kompas", question: "Strana podporuje podnikání a zároveň chce rozšiřovat osobní svobody. Kam nejspíš patří?", options: ["Pravice a libertariánský směr", "Levice a autoritářský směr"], answer: 0 },
+      { topic: "Politický kompas", question: "Strana podporuje sociální dávky a zároveň prosazuje přísná pravidla a silnou autoritu. Kam nejspíš patří?", options: ["Levice a autoritářský směr", "Pravice a libertariánský směr"], answer: 0 },
+      { topic: "Politický kompas", question: "Která osa politického kompasu vyjadřuje míru osobní svobody a státní autority?", options: ["Svislá osa", "Vodorovná osa"], answer: 0 }
+    ];
+
+    const QUESTION_COUNT = QUESTION_BANK.length;
+    const FEEDBACK_DELAY = 1100;
+    const animationTimers = new WeakMap();
+    const directionPattern = /^(?:levice|pravice|levicí|pravicí|levicový|pravicový)$/i;
+    const bankErrors = [];
+
+    if (QUESTION_COUNT !== 20) bankErrors.push(`Očekáváno 20 otázek, nalezeno ${QUESTION_COUNT}.`);
+    QUESTION_BANK.forEach((entry, index) => {
+      if (!entry || typeof entry.topic !== "string" || !entry.topic.trim()) {
+        bankErrors.push(`Otázka ${index + 1} nemá platné téma.`);
+        return;
+      }
+      if (typeof entry.question !== "string" || !entry.question.trim()) {
+        bankErrors.push(`Otázka ${index + 1} nemá text.`);
+      }
+      if (!Array.isArray(entry.options) || entry.options.length < 2 ||
+          entry.options.some(option => typeof option !== "string" || !option.trim()) ||
+          new Set(entry.options).size !== entry.options.length) {
+        bankErrors.push(`Otázka ${index + 1} musí mít alespoň dvě unikátní textové možnosti.`);
+        return;
+      }
+      if (!Number.isInteger(entry.answer) || entry.answer < 0 || entry.answer >= entry.options.length) {
+        bankErrors.push(`Otázka ${index + 1} má neplatný index správné odpovědi.`);
+      }
+      const hasLeftRightChoice = entry.options.some(option => directionPattern.test(option.trim()));
+      if (entry.topic === "Levice a pravice" && hasLeftRightChoice &&
+          (!entry.options.some(option => /^(?:levice|levicí|levicový)$/i.test(option.trim())) ||
+           !entry.options.some(option => /^(?:pravice|pravicí|pravicový)$/i.test(option.trim())))) {
+        bankErrors.push(`Otázka ${index + 1} musí obsahovat protikladné možnosti levice i pravice.`);
+      }
+    });
+    if (bankErrors.length) throw new Error(`Neplatná banka otázek:\n${bankErrors.join("\n")}`);
+    const elements = {
+      intro: document.getElementById("intro-screen"),
+      namesInput: document.getElementById("names-input"),
+      namesError: document.getElementById("names-error"),
+      quiz: document.getElementById("quiz-screen"),
+      result: document.getElementById("result-screen"),
+      topic: document.getElementById("topic-label"),
+      respondent: document.getElementById("respondent-label"),
+      question: document.getElementById("question-text"),
+      answers: document.getElementById("answers"),
+      feedback: document.getElementById("feedback"),
+      progress: document.getElementById("progress-fill"),
+      progressCount: document.getElementById("progress-count"),
+      score: document.getElementById("score"),
+      jar: document.getElementById("jar-fill"),
+      jarGlass: document.querySelector(".jar"),
+      jarMarbles: document.getElementById("jar-marbles"),
+      sidebar: document.querySelector(".sidebar")
+    };
+
+    let round = [];
+    let players = [];
+    let current = 0;
+    let score = 0;
+    let elapsedSeconds = 0;
+    let timerId = null;
+    let advanceId = null;
+    let pickId = null;
+    let gameStartedAt = null;
+
+    function shuffle(items) {
+      const shuffled = [...items];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    function formatTime(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+    }
+
+    function replayAnimation(element, className, duration) {
+      const previousTimer = animationTimers.get(element);
+      if (previousTimer) window.clearTimeout(previousTimer);
+      element.classList.remove(className);
+      void element.offsetWidth;
+      element.classList.add(className);
+      const timer = window.setTimeout(() => {
+        element.classList.remove(className);
+        animationTimers.delete(element);
+      }, duration);
+      animationTimers.set(element, timer);
+    }
+
+    function clearScoreMarbles() {
+      elements.jarMarbles.replaceChildren();
+    }
+
+    function dropScoreMarbles() {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (typeof Element.prototype.animate !== "function") return;
+
+      const colors = ["#ffdf37", "#fa5b91", "#735be7"];
+      const jarHeight = elements.jarGlass.clientHeight;
+      const fillHeight = jarHeight * score / QUESTION_COUNT;
+      const landingY = Math.max(12, jarHeight - fillHeight - 8);
+
+      colors.forEach((color, index) => {
+        const marble = document.createElement("span");
+        const horizontalOffset = (index - 1) * 10;
+        marble.className = "score-marble";
+        marble.style.setProperty("--marble-color", color);
+        marble.style.setProperty("--marble-x", `calc(50% + ${horizontalOffset}px)`);
+        elements.jarMarbles.append(marble);
+
+        const animation = marble.animate([
+          { transform: "translate(-50%, -18px) scale(.7)", opacity: 0 },
+          { transform: "translate(-50%, 0) scale(1)", opacity: 1, offset: .18 },
+          { transform: `translate(-50%, ${landingY}px) scale(.78)`, opacity: 1, offset: .84 },
+          { transform: `translate(-50%, ${landingY + 5}px) scale(.5)`, opacity: 0 }
+        ], {
+          duration: 720 + index * 90,
+          delay: index * 100,
+          easing: "cubic-bezier(.2,.7,.3,1)",
+          fill: "forwards"
+        });
+        animation.onfinish = () => marble.remove();
+      });
+    }
+
+    function updateHud() {
+      elements.score.textContent = String(score);
+      elements.jar.style.height = `${(score / QUESTION_COUNT) * 100}%`;
+      const completed = Math.min(current, QUESTION_COUNT);
+      elements.progress.style.width = `${(completed / QUESTION_COUNT) * 100}%`;
+      elements.progressCount.textContent = `${completed}/${QUESTION_COUNT}`;
+    }
+
+    function alignSidebarWithTopic() {
+      if (!window.matchMedia("(max-width: 620px)").matches) {
+        elements.sidebar.style.removeProperty("--sidebar-top-padding");
+        return;
+      }
+      const target = !elements.intro.classList.contains("hidden")
+        ? elements.intro.querySelector("h1")
+        : elements.quiz.classList.contains("hidden")
+          ? null
+          : elements.topic;
+      if (!target) {
+        elements.sidebar.style.removeProperty("--sidebar-top-padding");
+        return;
+      }
+      const topicTop = target.getBoundingClientRect().top;
+      const sidebarTop = elements.sidebar.getBoundingClientRect().top;
+      elements.sidebar.style.setProperty("--sidebar-top-padding", `${Math.max(0, topicTop - sidebarTop)}px`);
+    }
+
+    function beginGame() {
+      const enteredNames = elements.namesInput.value
+        .split(/[,\n]/)
+        .map(name => name.trim())
+        .filter(Boolean);
+      if (enteredNames.length === 0) {
+        elements.namesError.textContent = "Zadej alespoň jedno jméno.";
+        elements.namesInput.focus();
+        return;
+      }
+      players = enteredNames;
+      elements.namesError.textContent = "";
+      clearInterval(timerId);
+      clearTimeout(advanceId);
+      clearTimeout(pickId);
+      elements.respondent.classList.remove("shuffling");
+      clearScoreMarbles();
+      round = shuffle(QUESTION_BANK).slice(0, QUESTION_COUNT);
+      current = 0;
+      score = 0;
+      elapsedSeconds = 0;
+      gameStartedAt = Date.now();
+      elements.intro.classList.add("hidden");
+      elements.result.classList.add("hidden");
+      elements.quiz.classList.remove("hidden");
+      updateHud();
+      showQuestion();
+    }
+
+    function showQuestion() {
+      const entry = round[current];
+      if (!entry) {
+        finishGame();
+        return;
+      }
+      elements.topic.textContent = `${entry.topic} · Otázka ${current + 1} z ${QUESTION_COUNT}`;
+      const respondent = players[Math.floor(Math.random() * players.length)];
+      const respLabel = document.createElement("span");
+      respLabel.className = "respondent-label";
+      respLabel.textContent = "Odpovídá";
+      const respName = document.createElement("strong");
+      respName.className = "respondent-name";
+      respName.textContent = respondent;
+      elements.respondent.replaceChildren(respLabel, respName);
+      elements.question.textContent = entry.question;
+      elements.feedback.textContent = "";
+      elements.answers.replaceChildren();
+      const allChoices = entry.options.map((text, index) => ({ text, correct: index === entry.answer }));
+      const correctChoice = allChoices.find(choice => choice.correct);
+      const distractor = shuffle(allChoices.filter(choice => !choice.correct))[0];
+      const choices = shuffle([correctChoice, distractor]);
+      choices.forEach(choice => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "answer";
+        button.textContent = choice.text;
+        button.addEventListener("click", () => chooseAnswer(button, choice.correct, choices));
+        elements.answers.append(button);
+      });
+      updateHud();
+      startPick(respondent, respName);
+    }
+
+    function setName(nameEl, text) {
+      nameEl.textContent = text;
+      nameEl.style.fontSize = "";
+      if (getComputedStyle(nameEl).whiteSpace !== "nowrap") return;
+      const width = nameEl.clientWidth;
+      if (nameEl.scrollWidth > width) {
+        const size = parseFloat(getComputedStyle(nameEl).fontSize);
+        nameEl.style.fontSize = `${Math.max(20, Math.floor(size * width / nameEl.scrollWidth * 0.97))}px`;
+      }
+    }
+
+    function revealQuestion() {
+      elements.quiz.classList.remove("picking");
+      replayAnimation(elements.question, "entering", 800);
+      replayAnimation(elements.answers, "entering", 950);
+      replayAnimation(elements.progressCount, "bump", 450);
+      window.requestAnimationFrame(alignSidebarWithTopic);
+      elements.question.focus({ preventScroll: true });
+    }
+
+    function startPick(finalName, nameEl) {
+      clearTimeout(pickId);
+      const box = elements.respondent;
+      const area = document.querySelector(".play-area");
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      // změřit, kam se má box "zvětšit" (střed obrazovky)
+      elements.quiz.classList.remove("picking");
+      box.style.transition = "none";
+      setName(nameEl, finalName);
+      void box.offsetWidth;
+      const areaRect = area.getBoundingClientRect();
+      const boxRect = box.getBoundingClientRect();
+      const dy = (areaRect.top + areaRect.height / 2) - (boxRect.top + boxRect.height / 2);
+      const scale = Math.max(1, Math.min(1.2, (areaRect.width - 24) / boxRect.width));
+      box.style.setProperty("--pick-dy", `${dy}px`);
+      box.style.setProperty("--pick-scale", String(scale));
+      elements.quiz.classList.add("picking");
+      void box.offsetWidth;
+      box.style.transition = "";
+      window.requestAnimationFrame(alignSidebarWithTopic);
+
+      const names = [...new Set(players)];
+      if (reduceMotion || names.length < 2) {
+        pickId = setTimeout(revealQuestion, reduceMotion ? 150 : 900);
+        return;
+      }
+
+      // "míchání" jmen, postupně zpomalí a zastaví se na vylosovaném
+      box.classList.add("shuffling");
+      let step = 0;
+      let delay = 55;
+      const steps = 11;
+      const tick = () => {
+        if (step >= steps) {
+          box.classList.remove("shuffling");
+          setName(nameEl, finalName);
+          replayAnimation(nameEl, "landed", 550);
+          pickId = setTimeout(revealQuestion, 650);
+          return;
+        }
+        let next;
+        do { next = names[Math.floor(Math.random() * names.length)]; } while (next === nameEl.textContent);
+        setName(nameEl, next);
+        step += 1;
+        delay *= 1.14;
+        pickId = setTimeout(tick, delay);
+      };
+      tick();
+    }
+
+    function chooseAnswer(selectedButton, isCorrect, choices) {
+      if (elements.answers.querySelector("button:disabled")) return;
+      elements.answers.querySelectorAll("button").forEach(button => { button.disabled = true; });
+      if (isCorrect) {
+        score += 1;
+        selectedButton.classList.add("correct");
+        elements.feedback.textContent = "Správně! +1 bod";
+      } else {
+        selectedButton.classList.add("wrong");
+        elements.feedback.textContent = `To není ono. Správně: ${choices.find(choice => choice.correct).text}`;
+        elements.answers.querySelectorAll("button").forEach(button => {
+          if (button.textContent === choices.find(choice => choice.correct).text) button.classList.add("correct");
+          else if (button !== selectedButton) button.classList.add("muted");
+        });
+      }
+      replayAnimation(elements.feedback, "pop", 400);
+      if (isCorrect) {
+        replayAnimation(elements.score, "pop", 500);
+      }
+      updateHud();
+      if (isCorrect) dropScoreMarbles();
+      advanceId = setTimeout(() => {
+        current += 1;
+        if (current >= QUESTION_COUNT) finishGame();
+        else showQuestion();
+      }, FEEDBACK_DELAY);
+    }
+
+    function finishGame() {
+      elements.quiz.classList.add("hidden");
+      elements.result.classList.remove("hidden");
+      elements.progress.style.width = "100%";
+      elements.progressCount.textContent = `${QUESTION_COUNT}/${QUESTION_COUNT}`;
+      document.getElementById("result-score").textContent = `${score}/${QUESTION_COUNT}`;
+      const percentage = Math.round((score / QUESTION_COUNT) * 100);
+      document.getElementById("result-title").textContent =
+        percentage >= 80 ? "Parádní výsledek!" : percentage >= 50 ? "Dobrá práce!" : "Zkus to ještě jednou!";
+      document.getElementById("result-copy").textContent =
+        `Správně jsi odpověděl/a na ${score} z ${QUESTION_COUNT} otázek.`;
+      updateHud();
+      document.getElementById("result-title").focus({ preventScroll: true });
+    }
+
+    function showIntro() {
+      clearInterval(timerId);
+      clearTimeout(advanceId);
+      clearTimeout(pickId);
+      elements.respondent.classList.remove("shuffling");
+      timerId = null;
+      gameStartedAt = null;
+      clearScoreMarbles();
+      elements.quiz.classList.add("hidden");
+      elements.result.classList.add("hidden");
+      elements.intro.classList.remove("hidden");
+      window.requestAnimationFrame(alignSidebarWithTopic);
+    }
+
+    function parseNames(text) {
+      return text.split(/[,\n]/).map(name => name.trim()).filter(Boolean);
+    }
+    function renderNameChips() {
+      const chips = document.getElementById("name-chips");
+      const names = parseNames(elements.namesInput.value);
+      const shown = names.slice(0, 12).map(name => {
+        const chip = document.createElement("span");
+        chip.className = "name-chip";
+        chip.textContent = name;
+        return chip;
+      });
+      if (names.length > 12) {
+        const more = document.createElement("span");
+        more.className = "name-chip more";
+        more.textContent = `+${names.length - 12}`;
+        shown.push(more);
+      }
+      chips.replaceChildren(...shown);
+    }
+    elements.namesInput.addEventListener("input", () => {
+      elements.namesError.textContent = "";
+      renderNameChips();
+    });
+
+    document.getElementById("start-button").addEventListener("click", beginGame);
+    document.getElementById("replay-button").addEventListener("click", beginGame);
+    document.getElementById("back-button").addEventListener("click", showIntro);
+    window.addEventListener("resize", alignSidebarWithTopic);
+    elements.intro.addEventListener("animationend", alignSidebarWithTopic);
+    window.requestAnimationFrame(alignSidebarWithTopic);
+  </script>
+</body>
+</html>
